@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>e-Stock-Rekod-PARA | Bilik Drug Room VRI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-16">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-emerald-700 text-white rounded-xl shadow-sm">
+          <i class="fa-solid fa-boxes-stacked text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">e-Stock-Rekod-PARA</h1>
+          <p class="text-xs font-bold text-emerald-800 tracking-wide uppercase">REKOD STOK BARANG BILIK DRUG ROOM (SEKSYEN PARASITOLOGI & HEMATOLOGI VRI)</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <div id="syncBadge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="syncText">Menyambung Google Drive...</span>
+        </div>
+        <button onclick="loadFromGoogleDrive()" class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 shadow-sm transition">
+          <i class="fa-solid fa-arrows-rotate" id="refreshIcon"></i> Segerak
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Kandungan Utama -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
+    <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+      <div class="flex flex-wrap gap-2">
+        <button onclick="openModal('addModal')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-sm">
+          <i class="fa-solid fa-plus-circle"></i> Daftar Barang Baru
+        </button>
+        <button onclick="openModal('takeModal')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-sm">
+          <i class="fa-solid fa-hand-holding-hand"></i> Ambil Barang (Keluar)
+        </button>
+        <button onclick="openModal('restockModal')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-sm">
+          <i class="fa-solid fa-truck-ramp-box"></i> Tambah Stok (Masuk)
+        </button>
+      </div>
+      <div class="relative w-full sm:w-64">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+        <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari nama barang..." class="w-full pl-8 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+    </div>
+
+    <!-- Tab Pilihan -->
+    <div class="flex border-b border-slate-200 mb-4 bg-white rounded-t-xl px-4 pt-2 border-t border-x overflow-x-auto no-print">
+      <button onclick="switchTab('inventory')" id="tabInvBtn" class="py-2.5 px-4 font-bold text-sm border-b-2 border-emerald-600 text-emerald-700 flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-table-list"></i> Senarai Stok & Baki Semasa
+      </button>
+      <button onclick="switchTab('logs')" id="tabLogsBtn" class="py-2.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-clock-rotate-left"></i> Sejarah Transaksi
+      </button>
+      <button onclick="switchTab('report')" id="tabReportBtn" class="py-2.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-chart-pie"></i> Laporan Bulanan
+      </button>
+    </div>
+
+    <!-- Jadual Stok -->
+    <div id="inventorySection" class="bg-white rounded-b-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 uppercase text-xs tracking-wider">
+              <th class="py-3 px-4">Nama Barang (Drug Room)</th>
+              <th class="py-3 px-4 text-center">Tarikh Terima Terkini</th>
+              <th class="py-3 px-4 text-center">Kuantiti Terima</th>
+              <th class="py-3 px-4 text-center">Kuantiti Keluar</th>
+              <th class="py-3 px-4 text-center bg-slate-50 font-black">Baki Semasa</th>
+              <th class="py-3 px-4">Pengambil Terkini</th>
+              <th class="py-3 px-4 text-center">Tindakan</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="7" class="text-center py-10 text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600 mb-2"></i>
+                <p>Memuatkan data dari Google Drive...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Jadual Sejarah Transaksi -->
+    <div id="logsSection" class="hidden bg-white rounded-b-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+      <div class="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <span class="text-xs font-bold text-slate-600 uppercase">Rekod Masuk & Keluar Lengkap</span>
+        <button onclick="confirmResetHistory()" class="px-3 py-1.5 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 rounded-lg transition">
+          <i class="fa-solid fa-trash-arrow-up"></i> Reset Sejarah
+        </button>
+      </div>
+      <div class="overflow-x-auto max-h-[500px]">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 uppercase text-xs sticky top-0 z-10">
+              <th class="py-3 px-4">Tarikh</th>
+              <th class="py-3 px-4">Nama Barang</th>
+              <th class="py-3 px-4 text-center">Jenis</th>
+              <th class="py-3 px-4">Staf</th>
+              <th class="py-3 px-4 text-center">Kuantiti</th>
+              <th class="py-3 px-4 text-center">Baki Selepas</th>
+              <th class="py-3 px-4">Catatan</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bahagian Laporan Bulanan -->
+    <div id="reportSection" class="hidden bg-white rounded-b-xl border border-slate-200 shadow-sm p-6 mb-8">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-slate-200 no-print">
+        <div class="flex items-center gap-3">
+          <label class="text-xs font-bold text-slate-700 uppercase">Pilih Bulan & Tahun:</label>
+          <input type="month" id="reportMonthPicker" onchange="renderMonthlyReport()" class="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="downloadReportCSV()" class="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-2 shadow-sm transition">
+            <i class="fa-solid fa-file-excel"></i> Muat Turun Excel / CSV
+          </button>
+          <button onclick="window.print()" class="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-900 text-white rounded-lg flex items-center gap-2 shadow-sm transition">
+            <i class="fa-solid fa-print"></i> Cetak / PDF
+          </button>
+        </div>
+      </div>
+
+      <div id="printArea" class="space-y-6">
+        <div class="text-center pb-4 border-b">
+          <h2 class="text-lg font-black text-slate-900 uppercase">Laporan Bulanan Pergerakan Stok Bilik Drug Room</h2>
+          <p class="text-xs text-slate-600 font-bold uppercase mt-1">Seksyen Parasitologi & Hematologi VRI</p>
+          <p id="reportPeriodTitle" class="text-sm font-extrabold text-emerald-800 mt-2 bg-emerald-50 inline-block px-4 py-1 rounded-full border border-emerald-200">-</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl">
+            <span class="text-xs font-bold text-emerald-800 uppercase block mb-1">Jumlah Unit Masuk (Restock/Awal)</span>
+            <span id="repTotalIn" class="text-2xl font-black text-emerald-700">0</span>
+          </div>
+          <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-xl">
+            <span class="text-xs font-bold text-amber-800 uppercase block mb-1">Jumlah Unit Diambil (Keluar)</span>
+            <span id="repTotalOut" class="text-2xl font-black text-amber-700">0</span>
+          </div>
+          <div class="p-4 bg-indigo-50/60 border border-indigo-200 rounded-xl">
+            <span class="text-xs font-bold text-indigo-800 uppercase block mb-1">Jumlah Transaksi Bulan Ini</span>
+            <span id="repTotalTx" class="text-2xl font-black text-indigo-700">0</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-black uppercase text-slate-700 mb-2">Ringkasan Aktiviti Mengikut Barang</h4>
+          <div class="overflow-x-auto border border-slate-200 rounded-lg">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                <tr>
+                  <th class="p-2.5">Nama Barang</th>
+                  <th class="p-2.5 text-center">Masuk (Bulan Ini)</th>
+                  <th class="p-2.5 text-center">Keluar (Bulan Ini)</th>
+                  <th class="p-2.5 text-center">Baki Semasa Terkini</th>
+                </tr>
+              </thead>
+              <tbody id="reportItemSummaryBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-black uppercase text-slate-700 mb-2">Perincian Transaksi Bulan Ini</h4>
+          <div class="overflow-x-auto border border-slate-200 rounded-lg">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                <tr>
+                  <th class="p-2.5">Tarikh</th>
+                  <th class="p-2.5">Nama Barang</th>
+                  <th class="p-2.5 text-center">Jenis</th>
+                  <th class="p-2.5">Staf</th>
+                  <th class="p-2.5 text-center">Unit</th>
+                  <th class="p-2.5">Catatan</th>
+                </tr>
+              </thead>
+              <tbody id="reportLogsBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Daftar Baru -->
+  <div id="addModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <h3 class="font-bold text-slate-800 text-base"><i class="fa-solid fa-plus-circle text-emerald-600 mr-1"></i> Daftar Barang Baru</h3>
+        <button onclick="closeModal('addModal')" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <form onsubmit="handleAddNewItem(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nama Barang *</label>
+          <input type="text" id="addName" required placeholder="Cth: Glove Size S, Toilet Tissue" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tarikh Terima *</label>
+            <input type="date" id="addDate" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Kuantiti Terima *</label>
+            <input type="number" id="addQty" min="1" required placeholder="0" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeModal('addModal')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">Daftar & Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Ambil Barang -->
+  <div id="takeModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-amber-50 px-6 py-4 border-b border-amber-200 flex justify-between items-center">
+        <h3 class="font-bold text-amber-900 text-base"><i class="fa-solid fa-hand-holding-hand text-amber-600 mr-1"></i> Ambil Barang (Keluar)</h3>
+        <button onclick="closeModal('takeModal')" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <form onsubmit="handleTakeItem(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Pilih Barang *</label>
+          <select id="takeItemId" required onchange="updateTakeItemBalance()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <option value="">-- Pilih Barang --</option>
+          </select>
+        </div>
+        <div class="p-3 bg-amber-50/70 border border-amber-100 rounded-lg flex justify-between items-center text-xs">
+          <span class="text-slate-600">Baki stok sedia ada:</span>
+          <span id="takeCurrentBalance" class="font-black text-slate-900 text-sm">0</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tarikh Ambil *</label>
+            <input type="date" id="takeDate" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bil. Unit Keluar *</label>
+            <input type="number" id="takeQty" min="1" required oninput="calcTakePreview()" placeholder="0" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nama Staff *</label>
+          <select id="takeStaff" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <option value="">-- Pilih Nama Staff --</option>
+            <option value="DR ANN">DR ANN</option>
+            <option value="DR LIYA">DR LIYA</option>
+            <option value="PREMA">PREMA</option>
+            <option value="JUBREY">JUBREY</option>
+            <option value="ANAS">ANAS</option>
+            <option value="ADNAN">ADNAN</option>
+            <option value="PKA">PKA</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tujuan / Catatan (Pilihan)</label>
+          <input type="text" id="takeRemarks" placeholder="Cth: Ujian makmal" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        </div>
+        <div id="takePreviewBox" class="hidden p-3 bg-slate-100 rounded-lg text-xs flex justify-between font-bold">
+          <span>Anggaran Baki Tinggal:</span>
+          <span id="takeNewBalanceText" class="text-slate-900 font-black">0</span>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeModal('takeModal')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="submit" id="btnSubmitTake" class="px-5 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-lg">Rekod Pengambilan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Stok -->
+  <div id="restockModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-teal-50 px-6 py-4 border-b border-teal-200 flex justify-between items-center">
+        <h3 class="font-bold text-teal-900 text-base"><i class="fa-solid fa-truck-ramp-box text-teal-600 mr-1"></i> Tambah Stok (Masuk)</h3>
+        <button onclick="closeModal('restockModal')" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <form onsubmit="handleRestockItem(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Pilih Barang *</label>
+          <select id="restockItemId" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <option value="">-- Pilih Barang --</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Tarikh Terima Baru *</label>
+            <input type="date" id="restockDate" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bil. Unit Tambah *</label>
+            <input type="number" id="restockQty" min="1" required placeholder="0" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Diterima / Disimpan Oleh *</label>
+          <select id="restockStaff" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <option value="">-- Pilih Nama Staff --</option>
+            <option value="DR ANN">DR ANN</option>
+            <option value="DR LIYA">DR LIYA</option>
+            <option value="PREMA">PREMA</option>
+            <option value="JUBREY">JUBREY</option>
+            <option value="ANAS">ANAS</option>
+            <option value="ADNAN">ADNAN</option>
+            <option value="PKA">PKA</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeModal('restockModal')" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="submit" class="px-5 py-2 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-lg">Simpan Stok Masuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detail Jejak -->
+  <div id="detailModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+        <div>
+          <h3 id="detailItemTitle" class="font-bold text-slate-900 text-base">Nama Barang</h3>
+          <p class="text-xs text-slate-500">Sejarah transaksi barang ini (Boleh diedit atau dipadam jika tersilap)</p>
+        </div>
+        <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-3 gap-2 mb-4 p-3 bg-slate-50 rounded-lg border text-center text-xs">
+          <div><span class="text-slate-500 block">Jumlah Masuk</span><b id="dtTotalIn" class="text-emerald-700 text-sm">0</b></div>
+          <div><span class="text-slate-500 block">Jumlah Keluar</span><b id="dtTotalOut" class="text-amber-700 text-sm">0</b></div>
+          <div><span class="text-slate-500 block">Baki Semasa</span><b id="dtCurrentBal" class="text-slate-900 text-sm">0</b></div>
+        </div>
+        <div class="overflow-y-auto max-h-72 border border-slate-200 rounded-lg">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-100 text-slate-700 font-bold sticky top-0">
+              <tr>
+                <th class="p-2.5">Tarikh</th>
+                <th class="p-2.5 text-center">Aktiviti</th>
+                <th class="p-2.5">Staf</th>
+                <th class="p-2.5 text-center">Unit</th>
+                <th class="p-2.5 text-center">Baki</th>
+                <th class="p-2.5">Catatan</th>
+                <th class="p-2.5 text-center">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="detailTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div class="flex justify-end mt-4">
+          <button onclick="closeModal('detailModal')" class="px-4 py-1.5 text-xs font-bold bg-slate-200 hover:bg-slate-300 rounded-lg text-slate-700">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Transaksi -->
+  <div id="editLogModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="bg-slate-100 px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+        <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-pen-to-square text-emerald-600 mr-1.5"></i> Edit Rekod Transaksi</h3>
+        <button onclick="closeModal('editLogModal')" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <form onsubmit="handleSaveEditLog(event)" class="p-5 space-y-3">
+        <input type="hidden" id="editLogId">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Tarikh *</label>
+          <input type="date" id="editLogDate" required class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Kuantiti (Unit) *</label>
+          <input type="number" id="editLogQty" min="1" required class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nama Staf *</label>
+          <select id="editLogStaff" required class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+            <option value="">-- Pilih Nama Staf --</option>
+            <option value="DAFTAR AWAL">DAFTAR AWAL</option>
+            <option value="DR ANN">DR ANN</option>
+            <option value="DR LIYA">DR LIYA</option>
+            <option value="PREMA">PREMA</option>
+            <option value="JUBREY">JUBREY</option>
+            <option value="ANAS">ANAS</option>
+            <option value="ADNAN">ADNAN</option>
+            <option value="PKA">PKA</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Catatan</label>
+          <input type="text" id="editLogRemarks" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeModal('editLogModal')" class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg">Batal</button>
+          <button type="submit" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm">Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwe353k1YhZrDXoBKHuQegQfn_o557COEzopE2-zxG0Ud-TCChjSvmDDFHpdah6BUBV/exec";
+
+    let inventory = [];
+    let logs = [];
+    let currentDetailItemId = null;
+
+    function formatCustomDate(rawDate) {
+      if (!rawDate) return '-';
+      const str = String(rawDate).trim();
+      const match = str.match(/\d{4}-\d{2}-\d{2}/);
+      if (match) return match[0];
+
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+      }
+      return str.split(' ')[0] || '-';
+    }
+
+    function setBadge(state, text) {
+      const b = document.getElementById('syncBadge');
+      const t = document.getElementById('syncText');
+      if (!b || !t) return;
+      if (state === 'success') {
+        b.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        b.children[0].className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+      } else if (state === 'loading') {
+        b.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200";
+        b.children[0].className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+      } else {
+        b.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200";
+        b.children[0].className = "w-2.5 h-2.5 rounded-full bg-red-500";
+      }
+      t.innerText = text;
+    }
+
+    async function loadFromGoogleDrive() {
+      const icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      setBadge('loading', 'Menyelaras Drive...');
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saat timeout
+
+        const response = await fetch(GOOGLE_SCRIPT_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        inventory = data.inventory || [];
+        logs = data.logs || [];
+        setBadge('success', 'Google Drive Bersambung');
+      } catch (err) {
+        console.error(err);
+        setBadge('error', 'Gagal Capai Drive');
+      }
+
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      if (icon) icon.classList.remove('fa-spin');
+    }
+
+    async function syncToGoogleDrive() {
+      setBadge('loading', 'Menyimpan ke Drive...');
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inventory: inventory, logs: logs })
+        });
+        setBadge('success', 'Google Drive Tersimpan');
+      } catch (err) {
+        console.error(err);
+        setBadge('error', 'Gagal Simpan ke Drive');
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('inventoryTableBody');
+      if (!tbody) return;
+      const query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      const filtered = inventory.filter(i => (i.name || '').toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Tiada rekod barang. Klik "+ Daftar Barang Baru".</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        let taker = `<span class="text-slate-400 italic text-xs">Belum ada</span>`;
+        if (item.lastTaker) {
+          taker = `
+            <div class="flex flex-col">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 w-fit">
+                ${item.lastTaker}
+              </span>
+              <span class="text-[11px] text-slate-500 mt-0.5">${formatCustomDate(item.lastTakeDate)} (-${item.lastTakeQty || 0} unit)</span>
+            </div>
+          `;
+        }
+
+        const balClass = item.balance <= 0 ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50';
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-4 font-bold text-slate-800">
+              <button onclick="openDetailModal('${item.id}')" class="text-left hover:text-emerald-700 hover:underline">
+                ${item.name}
+              </button>
+            </td>
+            <td class="py-3 px-4 text-center text-slate-600 text-xs">${formatCustomDate(item.dateReceived)}</td>
+            <td class="py-3 px-4 text-center font-semibold text-slate-700">${item.qtyReceived || 0}</td>
+            <td class="py-3 px-4 text-center font-semibold text-amber-700">${item.qtyOut || 0}</td>
+            <td class="py-3 px-4 text-center font-black ${balClass}">${item.balance || 0}</td>
+            <td class="py-3 px-4">${taker}</td>
+            <td class="py-3 px-4 text-center">
+              <button onclick="openDetailModal('${item.id}')" class="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-sm transition inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-emerald-600"></i> Detail
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderLogs() {
+      const tbody = document.getElementById('logsTableBody');
+      if (!tbody) return;
+      if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-xs">Tiada sejarah transaksi.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = [...logs].reverse().map(l => {
+        const isOut = l.type === 'KELUAR';
+        const typeBadge = isOut 
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800">KELUAR</span>`
+          : `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">MASUK</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50 transition text-xs">
+            <td class="py-2.5 px-4 text-slate-500 whitespace-nowrap">${formatCustomDate(l.date)}</td>
+            <td class="py-2.5 px-4 font-bold text-slate-800">${l.itemName}</td>
+            <td class="py-2.5 px-4 text-center">${typeBadge}</td>
+            <td class="py-2.5 px-4 font-semibold text-slate-700">${l.staff}</td>
+            <td class="py-2.5 px-4 text-center font-bold ${isOut ? 'text-amber-700' : 'text-emerald-700'}">${isOut ? '-' : '+'}${l.qty}</td>
+            <td class="py-2.5 px-4 text-center font-bold text-slate-800">${l.balanceAfter}</td>
+            <td class="py-2.5 px-4 text-slate-500">${l.remarks || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderMonthlyReport() {
+      const picker = document.getElementById('reportMonthPicker');
+      if (!picker || !picker.value) return;
+
+      const selectedMonth = picker.value;
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      
+      const monthNames = [
+        "Januari", "Februari", "Mac", "April", "Mei", "Jun", 
+        "Julai", "Ogos", "September", "Oktober", "November", "Disember"
+      ];
+      const monthName = monthNames[parseInt(monthStr, 10) - 1];
+      const titleElem = document.getElementById('reportPeriodTitle');
+      if (titleElem) titleElem.innerText = `${monthName} ${yearStr}`;
+
+      const filteredLogs = logs.filter(l => {
+        if (!l.date) return false;
+        const cleanDate = formatCustomDate(l.date);
+        return cleanDate.startsWith(selectedMonth);
+      });
+
+      let totalIn = 0;
+      let totalOut = 0;
+      const itemMap = {};
+
+      inventory.forEach(item => {
+        itemMap[item.id] = {
+          name: item.name,
+          monthIn: 0,
+          monthOut: 0,
+          currentBal: item.balance || 0
+        };
+      });
+
+      filteredLogs.forEach(l => {
+        const qty = parseInt(l.qty) || 0;
+        if (l.type === 'MASUK') {
+          totalIn += qty;
+          if (itemMap[l.itemId]) itemMap[l.itemId].monthIn += qty;
+        } else if (l.type === 'KELUAR') {
+          totalOut += qty;
+          if (itemMap[l.itemId]) itemMap[l.itemId].monthOut += qty;
+        }
+      });
+
+      const repIn = document.getElementById('repTotalIn');
+      const repOut = document.getElementById('repTotalOut');
+      const repTx = document.getElementById('repTotalTx');
+      if (repIn) repIn.innerText = totalIn;
+      if (repOut) repOut.innerText = totalOut;
+      if (repTx) repTx.innerText = filteredLogs.length;
+
+      const itemSummaryTbody = document.getElementById('reportItemSummaryBody');
+      const activeItems = Object.values(itemMap);
+
+      if (itemSummaryTbody) {
+        if (activeItems.length === 0) {
+          itemSummaryTbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-400">Tiada barang didaftarkan.</td></tr>`;
+        } else {
+          itemSummaryTbody.innerHTML = activeItems.map(item => `
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-bold text-slate-800">${item.name}</td>
+              <td class="p-2.5 text-center font-semibold text-emerald-700">${item.monthIn > 0 ? '+' + item.monthIn : '0'}</td>
+              <td class="p-2.5 text-center font-semibold text-amber-700">${item.monthOut > 0 ? '-' + item.monthOut : '0'}</td>
+              <td class="p-2.5 text-center font-black text-slate-900">${item.currentBal}</td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      const reportLogsTbody = document.getElementById('reportLogsBody');
+      if (reportLogsTbody) {
+        if (filteredLogs.length === 0) {
+          reportLogsTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Tiada sebarang transaksi pada bulan ini.</td></tr>`;
+        } else {
+          reportLogsTbody.innerHTML = [...filteredLogs].reverse().map(l => {
+            const isOut = l.type === 'KELUAR';
+            const typeBadge = isOut 
+              ? `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800">KELUAR</span>`
+              : `<span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800">MASUK</span>`;
+
+            return `
+              <tr class="hover:bg-slate-50">
+                <td class="p-2.5 text-slate-500 whitespace-nowrap">${formatCustomDate(l.date)}</td>
+                <td class="p-2.5 font-bold text-slate-800">${l.itemName}</td>
+                <td class="p-2.5 text-center">${typeBadge}</td>
+                <td class="p-2.5 font-semibold text-slate-700">${l.staff}</td>
+                <td class="p-2.5 text-center font-bold ${isOut ? 'text-amber-700' : 'text-emerald-700'}">${isOut ? '-' : '+'}${l.qty}</td>
+                <td class="p-2.5 text-slate-500">${l.remarks || '-'}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function downloadReportCSV() {
+      const picker = document.getElementById('reportMonthPicker');
+      if (!picker || !picker.value) {
+        alert("Sila pilih bulan terlebih dahulu.");
+        return;
+      }
+
+      const selectedMonth = picker.value;
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      const monthNames = [
+        "Januari", "Februari", "Mac", "April", "Mei", "Jun", 
+        "Julai", "Ogos", "September", "Oktober", "November", "Disember"
+      ];
+      const monthName = monthNames[parseInt(monthStr, 10) - 1];
+
+      const filteredLogs = logs.filter(l => {
+        if (!l.date) return false;
+        const cleanDate = formatCustomDate(l.date);
+        return cleanDate.startsWith(selectedMonth);
+      });
+
+      let totalIn = 0;
+      let totalOut = 0;
+      filteredLogs.forEach(l => {
+        const q = parseInt(l.qty) || 0;
+        if (l.type === 'MASUK') totalIn += q;
+        else if (l.type === 'KELUAR') totalOut += q;
+      });
+
+      let csv = "";
+      csv += `"LAPORAN BULANAN PERGERAKAN STOK BILIK DRUG ROOM"\n`;
+      csv += `"SEKSYEN PARASITOLOGI & HEMATOLOGI VRI"\n`;
+      csv += `"Bulan: ${monthName} ${yearStr}"\n\n`;
+
+      csv += `"RINGKASAN KESELURUHAN"\n`;
+      csv += `"Jumlah Unit Masuk",${totalIn}\n`;
+      csv += `"Jumlah Unit Keluar",${totalOut}\n`;
+      csv += `"Jumlah Transaksi",${filteredLogs.length}\n\n`;
+
+      csv += `"RINGKASAN MENGIKUT BARANG"\n`;
+      csv += `"Nama Barang","Masuk (Bulan Ini)","Keluar (Bulan Ini)","Baki Semasa Terkini"\n`;
+      inventory.forEach(item => {
+        let mIn = 0;
+        let mOut = 0;
+        filteredLogs.forEach(l => {
+          if (l.itemId === item.id) {
+            const q = parseInt(l.qty) || 0;
+            if (l.type === 'MASUK') mIn += q;
+            else if (l.type === 'KELUAR') mOut += q;
+          }
+        });
+        csv += `"${(item.name || '').replace(/"/g, '""')}",${mIn},${mOut},${item.balance || 0}\n`;
+      });
+      csv += `\n`;
+
+      csv += `"PERINCIAN TRANSAKSI BULAN INI"\n`;
+      csv += `"Tarikh","Nama Barang","Jenis","Staf","Kuantiti","Catatan"\n`;
+      [...filteredLogs].reverse().forEach(l => {
+        const d = formatCustomDate(l.date);
+        const name = (l.itemName || '').replace(/"/g, '""');
+        const type = l.type || '';
+        const staff = (l.staff || '').replace(/"/g, '""');
+        const qty = l.qty || 0;
+        const remarks = (l.remarks || '-').replace(/"/g, '""');
+        csv += `"${d}","${name}","${type}","${staff}",${qty},"${remarks}"\n`;
+      });
+
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Laporan_Stok_DrugRoom_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function updateDropdowns() {
+      const t = document.getElementById('takeItemId');
+      const r = document.getElementById('restockItemId');
+      const opt = ['<option value="">-- Pilih Barang --</option>'];
+      inventory.forEach(i => opt.push(`<option value="${i.id}">${i.name} (Baki: ${i.balance})</option>`));
+      if (t) t.innerHTML = opt.join('');
+      if (r) r.innerHTML = opt.join('');
+    }
+
+    function handleAddNewItem(e) {
+      e.preventDefault();
+      const name = document.getElementById('addName').value.trim();
+      const date = document.getElementById('addDate').value;
+      const qty = parseInt(document.getElementById('addQty').value) || 0;
+
+      const item = {
+        id: 'ITM_' + Date.now(),
+        name,
+        dateReceived: date,
+        qtyReceived: qty,
+        qtyOut: 0,
+        balance: qty,
+        lastTaker: '',
+        lastTakeDate: '',
+        lastTakeQty: 0
+      };
+
+      inventory.push(item);
+      logs.push({
+        id: 'LOG_' + Date.now(),
+        itemId: item.id,
+        itemName: item.name,
+        type: 'MASUK',
+        date: date,
+        staff: 'DAFTAR AWAL',
+        qty: qty,
+        balanceAfter: qty,
+        remarks: 'Pendaftaran Stok Awal'
+      });
+
+      closeModal('addModal');
+      e.target.reset();
+      initDates();
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      syncToGoogleDrive();
+    }
+
+    function handleTakeItem(e) {
+      e.preventDefault();
+      const id = document.getElementById('takeItemId').value;
+      const date = document.getElementById('takeDate').value;
+      const qty = parseInt(document.getElementById('takeQty').value) || 0;
+      const staff = document.getElementById('takeStaff').value;
+      const remarks = document.getElementById('takeRemarks').value.trim();
+
+      const item = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      if (qty > item.balance) {
+        alert(`Baki tinggal ${item.balance} unit sahaja. Tidak boleh ambil melebihi baki!`);
+        return;
+      }
+
+      item.qtyOut = (item.qtyOut || 0) + qty;
+      item.balance = item.qtyReceived - item.qtyOut;
+      item.lastTaker = staff;
+      item.lastTakeDate = date;
+      item.lastTakeQty = qty;
+
+      logs.push({
+        id: 'LOG_' + Date.now(),
+        itemId: item.id,
+        itemName: item.name,
+        type: 'KELUAR',
+        date: date,
+        staff: staff,
+        qty: qty,
+        balanceAfter: item.balance,
+        remarks: remarks
+      });
+
+      closeModal('takeModal');
+      e.target.reset();
+      initDates();
+      const preview = document.getElementById('takePreviewBox');
+      if (preview) preview.classList.add('hidden');
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      syncToGoogleDrive();
+    }
+
+    function handleRestockItem(e) {
+      e.preventDefault();
+      const id = document.getElementById('restockItemId').value;
+      const date = document.getElementById('restockDate').value;
+      const qty = parseInt(document.getElementById('restockQty').value) || 0;
+      const staff = document.getElementById('restockStaff').value;
+
+      const item = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      item.qtyReceived = (item.qtyReceived || 0) + qty;
+      item.balance = item.qtyReceived - item.qtyOut;
+      item.dateReceived = date;
+
+      logs.push({
+        id: 'LOG_' + Date.now(),
+        itemId: item.id,
+        itemName: item.name,
+        type: 'MASUK',
+        date: date,
+        staff: staff,
+        qty: qty,
+        balanceAfter: item.balance,
+        remarks: 'Tambah Stok (Restock)'
+      });
+
+      closeModal('restockModal');
+      e.target.reset();
+      initDates();
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      syncToGoogleDrive();
+    }
+
+    function confirmResetHistory() {
+      if (confirm("Adakah anda pasti mahu mengosongkan SEMUA sejarah transaksi?")) {
+        logs = [];
+        renderLogs();
+        renderMonthlyReport();
+        syncToGoogleDrive();
+      }
+    }
+
+    function recalculateItemStock(itemId) {
+      const item = inventory.find(i => i.id === itemId);
+      if (!item) return;
+
+      const itemLogs = logs.filter(l => l.itemId === itemId);
+      
+      let sumIn = 0;
+      let sumOut = 0;
+      let lastTakerName = '';
+      let lastTakeDt = '';
+      let lastTakeQ = 0;
+
+      itemLogs.forEach(l => {
+        const q = parseInt(l.qty) || 0;
+        if (l.type === 'MASUK') {
+          sumIn += q;
+        } else if (l.type === 'KELUAR') {
+          sumOut += q;
+          lastTakerName = l.staff;
+          lastTakeDt = l.date;
+          lastTakeQ = q;
+        }
+        l.balanceAfter = sumIn - sumOut;
+      });
+
+      item.qtyReceived = sumIn;
+      item.qtyOut = sumOut;
+      item.balance = sumIn - sumOut;
+      item.lastTaker = lastTakerName;
+      item.lastTakeDate = lastTakeDt;
+      item.lastTakeQty = lastTakeQ;
+    }
+
+    function openDetailModal(id) {
+      currentDetailItemId = id;
+      const item = inventory.find(i => i.id === id);
+      if (!item) return;
+
+      document.getElementById('detailItemTitle').innerText = item.name;
+      document.getElementById('dtTotalIn').innerText = item.qtyReceived || 0;
+      document.getElementById('dtTotalOut').innerText = item.qtyOut || 0;
+      document.getElementById('dtCurrentBal').innerText = item.balance || 0;
+
+      const itemLogs = logs.filter(l => l.itemId === id).reverse();
+      const tbody = document.getElementById('detailTableBody');
+
+      if (!tbody) return;
+
+      if (itemLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Tiada rekod bagi barang ini.</td></tr>`;
+      } else {
+        tbody.innerHTML = itemLogs.map(l => {
+          const isOut = l.type === 'KELUAR';
+          return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-2.5 text-slate-500 whitespace-nowrap">${formatCustomDate(l.date)}</td>
+              <td class="p-2.5 text-center font-bold ${isOut ? 'text-amber-700' : 'text-emerald-700'}">${l.type}</td>
+              <td class="p-2.5 font-semibold text-slate-700">${l.staff}</td>
+              <td class="p-2.5 text-center font-bold">${isOut ? '-' : '+'}${l.qty}</td>
+              <td class="p-2.5 text-center font-black">${l.balanceAfter}</td>
+              <td class="p-2.5 text-slate-500">${l.remarks || '-'}</td>
+              <td class="p-2.5 text-center whitespace-nowrap">
+                <button onclick="openEditLogModal('${l.id}')" title="Edit rekod ini" class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition mr-1">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteLogEntry('${l.id}')" title="Padam rekod ini" class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      openModal('detailModal');
+    }
+
+    function openEditLogModal(logId) {
+      const log = logs.find(l => l.id === logId);
+      if (!log) return;
+
+      document.getElementById('editLogId').value = log.id;
+      document.getElementById('editLogDate').value = formatCustomDate(log.date);
+      document.getElementById('editLogQty').value = log.qty;
+      document.getElementById('editLogStaff').value = log.staff;
+      document.getElementById('editLogRemarks').value = log.remarks || '';
+
+      openModal('editLogModal');
+    }
+
+    function handleSaveEditLog(e) {
+      e.preventDefault();
+      const logId = document.getElementById('editLogId').value;
+      const log = logs.find(l => l.id === logId);
+      if (!log) return;
+
+      const newDate = document.getElementById('editLogDate').value;
+      const newQty = parseInt(document.getElementById('editLogQty').value) || 0;
+      const newStaff = document.getElementById('editLogStaff').value;
+      const newRemarks = document.getElementById('editLogRemarks').value.trim();
+
+      log.date = newDate;
+      log.qty = newQty;
+      log.staff = newStaff;
+      log.remarks = newRemarks;
+
+      recalculateItemStock(log.itemId);
+
+      closeModal('editLogModal');
+      if (currentDetailItemId) openDetailModal(currentDetailItemId);
+
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      syncToGoogleDrive();
+    }
+
+    function deleteLogEntry(logId) {
+      const logIdx = logs.findIndex(l => l.id === logId);
+      if (logIdx === -1) return;
+
+      const targetLog = logs[logIdx];
+      const item = inventory.find(i => i.id === targetLog.itemId);
+
+      if (!confirm(`Padam rekod ${targetLog.type} (${targetLog.qty} unit) oleh ${targetLog.staff}? Baki stok akan dilaraskan semula.`)) {
+        return;
+      }
+
+      logs.splice(logIdx, 1);
+
+      if (item) {
+        recalculateItemStock(item.id);
+        const remainingItemLogs = logs.filter(l => l.itemId === item.id);
+        if (remainingItemLogs.length === 0) {
+          if (confirm(`Semua rekod bagi "${item.name}" telah tiada. Padam terus barang ini daripada Senarai Stok?`)) {
+            inventory = inventory.filter(i => i.id !== item.id);
+            closeModal('detailModal');
+          }
+        }
+      }
+
+      if (currentDetailItemId) {
+        const stillExist = inventory.find(i => i.id === currentDetailItemId);
+        if (stillExist) {
+          openDetailModal(currentDetailItemId);
+        }
+      }
+
+      renderTable();
+      renderLogs();
+      renderMonthlyReport();
+      updateDropdowns();
+      syncToGoogleDrive();
+    }
+
+    function updateTakeItemBalance() {
+      const id = document.getElementById('takeItemId').value;
+      const item = inventory.find(i => i.id === id);
+      const balElem = document.getElementById('takeCurrentBalance');
+      if (balElem) balElem.innerText = item ? item.balance : '0';
+      calcTakePreview();
+    }
+
+    function calcTakePreview() {
+      const id = document.getElementById('takeItemId').value;
+      const qty = parseInt(document.getElementById('takeQty').value) || 0;
+      const preview = document.getElementById('takePreviewBox');
+      const text = document.getElementById('takeNewBalanceText');
+      const btn = document.getElementById('btnSubmitTake');
+
+      const item = inventory.find(i => i.id === id);
+      if (!item || isNaN(qty) || qty <= 0) {
+        if (preview) preview.classList.add('hidden');
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      if (preview) preview.classList.remove('hidden');
+      const baki = item.balance - qty;
+      if (text) text.innerText = baki;
+
+      if (baki < 0) {
+        if (text) text.className = "text-red-600 font-black";
+        if (btn) btn.disabled = true;
+      } else {
+        if (text) text.className = "text-emerald-700 font-black";
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function switchTab(t) {
+      const iS = document.getElementById('inventorySection');
+      const lS = document.getElementById('logsSection');
+      const rS = document.getElementById('reportSection');
+      const iB = document.getElementById('tabInvBtn');
+      const lB = document.getElementById('tabLogsBtn');
+      const rB = document.getElementById('tabReportBtn');
+
+      if (!iS || !lS || !rS || !iB || !lB || !rB) return;
+
+      iS.classList.add('hidden');
+      lS.classList.add('hidden');
+      rS.classList.add('hidden');
+
+      const inactiveStyle = "py-2.5 px-4 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap";
+      const activeStyle = "py-2.5 px-4 font-bold text-sm border-b-2 border-emerald-600 text-emerald-700 flex items-center gap-2 whitespace-nowrap";
+
+      iB.className = inactiveStyle;
+      lB.className = inactiveStyle;
+      rB.className = inactiveStyle;
+
+      if (t === 'inventory') {
+        iS.classList.remove('hidden');
+        iB.className = activeStyle;
+      } else if (t === 'logs') {
+        lS.classList.remove('hidden');
+        lB.className = activeStyle;
+      } else if (t === 'report') {
+        rS.classList.remove('hidden');
+        rB.className = activeStyle;
+        renderMonthlyReport();
+      }
+    }
+
+    function openModal(id) { 
+      const m = document.getElementById(id);
+      if (m) m.classList.remove('hidden'); 
+    }
+    
+    function closeModal(id) { 
+      const m = document.getElementById(id);
+      if (m) m.classList.add('hidden'); 
+      if (id === 'detailModal') currentDetailItemId = null;
+    }
+
+    function initDates() {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
+      const a = document.getElementById('addDate');
+      const k = document.getElementById('takeDate');
+      const r = document.getElementById('restockDate');
+      const m = document.getElementById('reportMonthPicker');
+
+      if (a) a.value = today;
+      if (k) k.value = today;
+      if (r) r.value = today;
+      if (m && !m.value) m.value = today.substring(0, 7);
+    }
+
+    window.onload = function() {
+      initDates();
+      loadFromGoogleDrive();
+      setInterval(loadFromGoogleDrive, 20000);
+    };
+  </script>
+</body>
+</html>
